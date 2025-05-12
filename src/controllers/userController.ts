@@ -22,24 +22,25 @@ export async function userController(req: IncomingMessage, res: ServerResponse) 
                 res.end(JSON.stringify(users));
                 return;
             }
-            if (userId) {
-                if (isUUIDValid(userId)) {
-                    const user = userService.getUserById(userId);
-                    if (user) {
-                        res.writeHead(200, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify(user));
-                        return;
-                    } else {
-                        res.writeHead(404, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ error: 'User not found' }));
-                        return;
-                    }
-                } else {
+
+            if (url.startsWith('/api/users/')) {
+                if (!userId || !isUUIDValid(userId)) {
                     res.writeHead(400, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ error: 'Invalid user ID' }));
                     return;
                 }
-            }
+                
+                const user = userService.getUserById(userId);
+                if (user) {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(user));
+                    return;
+                } else {
+                    res.writeHead(404, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'User not found' }));
+                }
+                return;
+            } 
         }
 
         if (method === 'POST' && url === '/api/users') {
@@ -56,8 +57,8 @@ export async function userController(req: IncomingMessage, res: ServerResponse) 
             return;
         }
 
-        if (method === 'PUT' && userId) {
-            if (!isUUIDValid(userId)) {
+        if (method === 'PUT' && url.startsWith('/api/users/')) {
+            if (!userId || !isUUIDValid(userId)) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: 'Invalid user ID' }));
                 return;
@@ -75,16 +76,15 @@ export async function userController(req: IncomingMessage, res: ServerResponse) 
             if (updatedUser) {
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify(updatedUser));
-                return;
             } else {
                 res.writeHead(404, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ error: 'User not found' }));
-                return;
             }
+            return;
         }
         
-        if (method === 'DELETE' && userId) {
-            if (!isUUIDValid(userId)) {
+        if (method === 'DELETE' && url.startsWith('/api/users/')) {
+            if (!userId || !isUUIDValid(userId)) {
                 res.writeHead(400, {'Content-Type': 'application/json'});
                 res.end(JSON.stringify("Invalid user ID"));
                 return;
@@ -93,16 +93,18 @@ export async function userController(req: IncomingMessage, res: ServerResponse) 
             const deletedUser = userService.deleteUser(userId);
 
             if (deletedUser) {
-                res.writeHead(204, {'Content-Type': 'application/json'});
-                res.end(JSON.stringify(deletedUser));
-                return;
+                res.writeHead(204);
+                res.end();
             } else {
                 res.writeHead(404, {'Content-Type': 'application/json'});
-                res.end(JSON.stringify("User not found"));
-                return;
+                res.end(JSON.stringify({error: "User not found"}));
             }
+            return;
         }
 
+        res.writeHead(405, {'Content-Type': 'application/json'});
+        res.end(JSON.stringify({error: "Method not allowed or invalid endpoint"}));
+        
     } catch (error) {
         console.error(error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
