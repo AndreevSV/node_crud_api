@@ -2,7 +2,7 @@ import 'dotenv/config';
 import http, { OutgoingHttpHeaders, ServerResponse, IncomingMessage} from 'node:http';
 import cluster from 'node:cluster';
 import { cpus } from 'node:os';
-import { userController } from './controllers/userController';
+import { userController } from './controllers/userController.js';
 
 interface WorkerMessage {
     type: 'request' | 'response';

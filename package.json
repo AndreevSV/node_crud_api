@@ -4,9 +4,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start:dev": "nodemon",
+    "start:dev": "nodemon --exec node --loader ts-node/esm src/index.ts",
     "start:prod": "tsc && node dist/index.js",
-    "start:multi": "cross-env MODE=cluster ts-node src/index.ts",
+    "start:multi": "cross-env MODE=cluster nodemon --exec node --loader ts-node/esm src/index.ts",
     "test": "jest",
     "build": "tsc"
   },

@@ -1,7 +1,6 @@
 import { SQLOutputValue } from 'node:sqlite';
-import { UUID } from 'node:crypto';
-import db from '../db/database';
-import { User, NewUser } from '../models/userModel';
+import db from '../db/database.js';
+import { User, NewUser } from '../models/userModel.js';
 
 function getAllUsers(): User[] | undefined {
     const stmt = db.prepare(`SELECT * FROM users;`);

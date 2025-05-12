@@ -1,6 +1,6 @@
 import { IncomingMessage, ServerResponse } from 'node:http';
-import userService from '../services/userService';
-import { User, NewUser } from '../models/userModel';
+import userService from '../services/userService.js';
+import { NewUser } from '../models/userModel.js';
 
 
 export async function userController(req: IncomingMessage, res: ServerResponse) {

@@ -1,6 +1,6 @@
-import { User, NewUser } from '../models/userModel';
+import { User, NewUser } from '../models/userModel.js';
 import { randomUUID } from 'node:crypto';
-import repository from '../repositories/userRepository';
+import repository from '../repositories/userRepository.js';
 
 function getAllUsers(): User[] | undefined {
     return repository.getAllUsers();
