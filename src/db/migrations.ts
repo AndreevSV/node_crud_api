@@ -1,15 +1,6 @@
 import db from '../db/database.js';
 import { randomUUID } from 'node:crypto';
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users(
-    id TEXT UNIQUE NOT NULL, 
-    username TEXT NOT NULL, 
-    age INTEGER NOT NULL, 
-    hobbies TEXT NOT NULL
-    );
-`);
-
 const users = [
     {
         id: randomUUID(),
@@ -42,6 +33,15 @@ const users = [
         hobbies: JSON.stringify(['pig-pong', 'swimming']),
     },
 ];
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users(
+    id TEXT UNIQUE NOT NULL, 
+    username TEXT NOT NULL, 
+    age INTEGER NOT NULL, 
+    hobbies TEXT NOT NULL
+    );
+`);
 
 const insertStmt = db.prepare(`
         INSERT OR IGNORE INTO users (id, username, age, hobbies) VALUES (?, ?, ?, ?);

@@ -83,7 +83,7 @@ export async function userController(req: IncomingMessage, res: ServerResponse) 
             }
         }
         
-        if (method === 'DELTE' && userId) {
+        if (method === 'DELETE' && userId) {
             if (!isUUIDValid(userId)) {
                 res.writeHead(400, {'Content-Type': 'application/json'});
                 res.end(JSON.stringify("Invalid user ID"));
