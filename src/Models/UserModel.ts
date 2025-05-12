@@ -1,8 +1,8 @@
-export interface UserModel {
+export interface User {
     id: string;
     username: string;
     age: number;
     hobbies: string[];
 }
 
-export type NewUser = Omit<UserModel, 'id'>;
+export type NewUser = Omit<User, 'id'>;
