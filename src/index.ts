@@ -3,6 +3,7 @@ import http, { OutgoingHttpHeaders, ServerResponse, IncomingMessage} from 'node:
 import cluster from 'node:cluster';
 import { cpus } from 'node:os';
 import { userController } from './controllers/userController.js';
+import './db/init.js';
 
 interface WorkerMessage {
     type: 'request' | 'response';

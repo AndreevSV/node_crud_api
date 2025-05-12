@@ -6,7 +6,8 @@ db.exec(`
     id TEXT UNIQUE NOT NULL, 
     username TEXT NOT NULL, 
     age INTEGER NOT NULL, 
-    hobbies TEXT NOT NULL; 
+    hobbies TEXT NOT NULL
+    );
 `);
 
 const users = [
@@ -43,13 +44,11 @@ const users = [
 ];
 
 const insertStmt = db.prepare(`
-        INSERT INTO users (id, username, age, hobbies) VALUES (?, ?, ?, ?);
+        INSERT OR IGNORE INTO users (id, username, age, hobbies) VALUES (?, ?, ?, ?);
     `);
 
 users.forEach((user) => {
     insertStmt.run(user.id, user.username, user.age, user.hobbies);
 });
-
-if (db) db.close();
 
 export { users };
