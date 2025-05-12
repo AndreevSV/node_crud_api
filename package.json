@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "start:dev": "nodemon --exec node --loader ts-node/esm src/index.ts",
-    "start:prod": "tsc && node dist/index.js",
-    "start:multi": "cross-env MODE=cluster nodemon --exec node --loader ts-node/esm src/index.ts",
-    "test": "jest",
+    "start:prod": "npm run build && node dist/index.js",
+    "start:multi": "cross-env MODE=cluster node --loader ts-node/esm src/index.ts",
+    "test": "cross-env NODE_OPTIONS=\"--experimental-vm-modules --experimental-loader=ts-node/esm\" jest",
     "build": "tsc"
   },
   "keywords": [],

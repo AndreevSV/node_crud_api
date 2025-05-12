@@ -1,111 +1,145 @@
 import 'dotenv/config';
-import http, { OutgoingHttpHeaders, ServerResponse, IncomingMessage, IncomingHttpHeaders } from 'node:http';
+import http, { IncomingMessage, ServerResponse } from 'node:http';
 import cluster from 'node:cluster';
 import { cpus } from 'node:os';
 import { userController } from './controllers/userController.js';
 import './db/init.js';
 
-interface WorkerMessage {
-    type: 'request' | 'response';
-    method?: string;
-    url?: string;
-    headers?: IncomingHttpHeaders;
-    body?: string;
-    statusCode?: number;
-    req?: IncomingMessage;
-}
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+});
+process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled Rejection:', reason);
+});
 
 const PORT = Number(process.env.PORT) || 4000;
 const numberOfCores = cpus().length;
 
+process.on('SIGINT', () => {
+    console.log('Shutting down...');
+    if (cluster.isPrimary) {
+        Object.values(cluster.workers || {}).forEach(worker => {
+            worker?.kill();
+        });
+    }
+    process.exit(0);
+})
+
 if (process.env.MODE === 'cluster' && cluster.isPrimary) {
     console.log(`Primary ${process.pid} is running`);
 
+    let currentWorkerIndex = 0;
+    const workerPorts = new Map<number, number>();
+    let workersReady = 0;
+
+    const startServer = () => {
+        server.listen(PORT, () => {
+            console.log(`Load balancer listening on port ${PORT}`);
+        });
+    };
+
     for (let i = 0; i < numberOfCores; i++) {
-        cluster.fork({ PORT: PORT + i });
+        const workerPort = PORT + i + 1;
+        const worker = cluster.fork({ PORT: workerPort });
+        workerPorts.set(worker.id, workerPort);
+
+        worker.on('message', (message) => {
+            if (message === 'ready') {
+                workersReady++;
+                console.log(`Worker ${worker.id} is ready`);
+                if (workersReady === numberOfCores) {
+                    startServer();
+                }
+            }
+        });
     }
 
-    const server = http.createServer((req, res) => {
-        const workers = Object.values(cluster.workers || {});
-        const worker = workers[Math.floor(Math.random() * workers.length)];
+    const server = http.createServer((req: IncomingMessage, res: ServerResponse) => {
 
-        if (worker) {
-            let body = '';
-            req.on('data', (chunk) => body += chunk);
-            req.on('end', () => {
-                worker.send({
-                    type: 'request',
-                    method: req.method,
-                    url: req.url,
-                    headers: req.headers,
-                    body: body
-                });
-            });
-            worker.once('message', (message: WorkerMessage) => {
-                if (message.type === 'response') {
-                    res.writeHead(message.statusCode ?? 200, message.headers);
-                    res.end(message.body);
-                }
-            });
-        } else {
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ message: 'No workers available' }));
+        const validPath = /^\/api\/users(\/[a-f0-9-]{36})?$/i;
+
+        if (!req.url || !validPath.test(req.url)) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Invalid endpoint' }));
+            return;
         }
-    });
 
-    server.listen(PORT, () => {
-        console.log('Load balancer on port', PORT)
+        const workers = Object.values(cluster.workers || {});
+
+        if (workers.length === 0) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'No workers available' }));
+            return;
+        }
+
+        const worker = workers[currentWorkerIndex];
+
+        if (!worker) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'No workers available' }));
+            return;
+        }
+
+        currentWorkerIndex = (currentWorkerIndex + 1) % workers.length;
+
+        const workerPort = workerPorts.get(worker.id);
+
+        if (!workerPort) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Worker port not found' }));
+            return;
+        }
+
+        const options = {
+            hostname: 'localhost',
+            port: workerPort,
+            path: req.url || '/',
+            method: req.method,
+            headers: {
+                ...req.headers,
+                'x-forwarded-host': req.headers.host || 'localhost',
+                'x-forwarded-for': req.socket.remoteAddress || ''
+            }
+        };
+
+        console.log(`Forwarding ${req.method} request to worker on port ${workerPort}`);
+
+        const proxyReq = http.request(options, (proxyRes) => {
+            res.writeHead(proxyRes.statusCode || 500, proxyRes.headers);
+            proxyRes.pipe(res);
+        });
+
+        proxyReq.on('error', (error) => {
+            console.error(`Proxy request error to worker on port ${workerPort}:`, error);
+            res.writeHead(500, { 'Content-Type': 'text/plain' });
+            res.end('Internal Server Error');
+        });
+
+        req.pipe(proxyReq);
     });
 
     cluster.on('exit', (worker, code, signal) => {
         console.log(`Worker ${worker.process.pid} died`);
-        cluster.fork();
+        const deadPort = workerPorts.get(worker.id);
+        workerPorts.delete(worker.id);
+        if (deadPort) {
+            const newWorker = cluster.fork({ PORT: deadPort });
+            workerPorts.set(newWorker.id, deadPort);
+        }
     });
+
 } else {
     const server = http.createServer((req, res) => {
         userController(req, res);
     });
 
-    server.listen(PORT, () => {
-        console.log('Server started on port', PORT)
+    const serverPort = Number(process.env.PORT);
+    server.listen(serverPort, () => {
+        console.log(`Worker ${process.pid} running on port ${serverPort}`);
+        if (process.send) {
+            process.send('ready');
+        }
     });
-
-    if (cluster.isWorker) {
-        process.on('message', (message: WorkerMessage) => {
-            if (message.type === 'request') {
-                const artificialReq = new http.IncomingMessage(null as any);
-                artificialReq.method = message.method;
-                artificialReq.url = message.url ?? '';
-                artificialReq.headers = message.headers ?? {} as IncomingHttpHeaders;
-
-                if (message.body) {
-                    const buffer = Buffer.from(message.body);
-                    artificialReq.push(buffer);
-                    artificialReq.push(null);
-
-                    (artificialReq as any)._body = JSON.parse(message.body);
-                }
-
-                userController(artificialReq, {
-                    writeHead: (statusCode: number, headers?: OutgoingHttpHeaders) => {
-                        process.send?.({
-                            type: 'response',
-                            statusCode,
-                            headers,
-                            body: ''
-                        } as WorkerMessage);
-                    },
-                    end: (body: string) => {
-                        process.send?.({
-                            type: 'response',
-                            body,
-
-                        } as WorkerMessage);
-                    }
-                } as ServerResponse);
-            }
-        })
-    }
 }
 
 
