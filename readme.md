@@ -1,63 +1,131 @@
-# [Course program module (for RS School students)](https://github.com/rolling-scopes-school/tasks/blob/master/node/modules/crud-api/README.md)
+# CRUD API
 
-# Assignment: CRUD API
+A simple CRUD API implementation using Node.js and TypeScript with in-memory database.
 
-## Description
+## Setup and Installation
 
-Your task is to implement simple CRUD API using in-memory database underneath.
+1. Clone the repository
+2. Install dependencies:
+```
+npm install
+```
+3. Create `.env` file in the root directory:
+```
+PORT=4000
+```
 
-## Technical requirements
+## Running the Application
 
-- Task can be implemented on Javascript or Typescript
-- Only `nodemon`, `dotenv`, `cross-env`, `typescript`, `ts-node`, `ts-node-dev`, `eslint` and its plugins, `webpack-cli`, `webpack` and its plugins and loaders, `prettier`, `uuid`, `@types/*` as well as libraries used for testing are allowed
-- Use 22.x.x version (22.14.0 or upper) of Node.js
-- Prefer asynchronous API whenever possible
+There are three modes available to run the application:
 
-## Implementation details
+1. Development mode (with hot reload):
+```
+npm run start:dev
+```
 
-1. Implemented endpoint `api/users`:
-    - **GET** `api/users` is used to get all persons
-        - Server should answer with `status code` **200** and all users records
-    - **GET** `api/users/{userId}` 
-        - Server should answer with `status code` **200** and record with `id === userId` if it exists
-        - Server should answer with `status code` **400** and corresponding message if `userId` is invalid (not `uuid`)
-        - Server should answer with `status code` **404** and corresponding message if record with `id === userId` doesn't exist
-    - **POST** `api/users` is used to create record about new user and store it in database
-        - Server should answer with `status code` **201** and newly created record
-        - Server should answer with `status code` **400** and corresponding message if request `body` does not contain **required** fields
-    - **PUT** `api/users/{userId}` is used to update existing user
-        - Server should answer with` status code` **200** and updated record
-        - Server should answer with` status code` **400** and corresponding message if `userId` is invalid (not `uuid`)
-        - Server should answer with` status code` **404** and corresponding message if record with `id === userId` doesn't exist
-    - **DELETE** `api/users/{userId}` is used to delete existing user from database
-        - Server should answer with `status code` **204** if the record is found and deleted
-        - Server should answer with `status code` **400** and corresponding message if `userId` is invalid (not `uuid`)
-        - Server should answer with `status code` **404** and corresponding message if record with `id === userId` doesn't exist
-2. Users are stored as `objects` that have following properties:
-    - `id` — unique identifier (`string`, `uuid`) generated on server side
-    - `username` — user's name (`string`, **required**)
-    - `age` — user's age (`number`, **required**)
-    - `hobbies` — user's hobbies (`array` of `strings` or empty `array`, **required**)
-3. Requests to non-existing endpoints (e.g. `some-non/existing/resource`) should be handled (server should answer with `status code` **404** and corresponding human-friendly message)
-4. Errors on the server side that occur during the processing of a request should be handled and processed correctly (server should answer with `status code` **500** and corresponding human-friendly message)
-5. Value of `port` on which application is running should be stored in `.env` file
-6. There should be 2 modes of running application (**development** and **production**):
-    - The application is run in development mode using `nodemon` or `ts-node-dev` (there is a `npm` script `start:dev`)
-    - The application is run in production mode (there is a `npm` script `start:prod` that starts the build process and then runs the bundled file)
-7. There could be some tests for API (not less than **3** scenarios). Example of test scenario:
-    1. Get all records with a `GET` `api/users` request (an empty array is expected)
-    2. A new object is created by a `POST` `api/users` request (a response containing newly created record is expected)
-    3. With a `GET` `api/users/{userId}` request, we try to get the created  record by its `id` (the created record is expected)
-    4. We try to update the created record with a `PUT` `api/users/{userId}`request (a response is expected containing an updated object with the same `id`)
-    5. With a `DELETE` `api/users/{userId}` request, we delete the created object by `id` (confirmation of successful deletion is expected)
-    6. With a `GET` `api/users/{userId}` request, we are trying to get a deleted object by `id` (expected answer is that there is no such object)
-8. There could be implemented horizontal scaling for application, there should be `npm` script `start:multi` that starts multiple instances of your application using the Node.js `Cluster` API (equal to the number of available parallelism - 1 on the host machine, each listening on port PORT + n) with a **load balancer** that distributes requests across them (using Round-robin algorithm). For example: available parallelism is 4, `PORT` is 4000. On run `npm run start:multi` it works following way
-- On `localhost:4000/api` load balancer is listening for requests
-- On `localhost:4001/api`, `localhost:4002/api`, `localhost:4003/api` workers are listening for requests from load balancer
-- When user sends request to `localhost:4000/api`, load balancer sends this request to `localhost:4001/api`, next user request is sent to `localhost:4002/api` and so on.
-- After sending request to `localhost:4003/api` load balancer starts from the first worker again (sends request to `localhost:4001/api`)
-- State of db should be consistent between different workers, for example:
-    1. First `POST` request addressed to `localhost:4001/api` creates user
-    2. Second `GET` request addressed to `localhost:4002/api` should return created user
-    3. Third `DELETE` request addressed to `localhost:4003/api` deletes created user
-    4. Fourth `GET` request addressed to `localhost:4001/api` should return **404** status code for created user
+2. Production mode:
+```
+npm run start:prod
+```
+
+3. Multi-threaded mode (with load balancer):
+```
+npm run start:multi
+```
+
+## API Endpoints
+
+Base URL: `http://localhost:4000/api`
+
+### GET /users
+- Returns all users
+- Response: 200 OK with array of users
+
+### GET /users/{userId}
+- Returns specific user by ID
+- Response: 
+  - 200 OK with user data
+  - 400 Bad Request if invalid UUID
+  - 404 Not Found if user doesn't exist
+
+### POST /users
+- Creates new user
+- Required fields in request body:
+  ```json
+  {
+    "username": "string",
+    "age": number,
+    "hobbies": string[]
+  }
+  ```
+- Response:
+  - 201 Created with new user data
+  - 400 Bad Request if missing required fields
+
+### PUT /users/{userId}
+- Updates existing user
+- Same body format as POST
+- Response:
+  - 200 OK with updated user data
+  - 400 Bad Request if invalid UUID
+  - 404 Not Found if user doesn't exist
+
+### DELETE /users/{userId}
+- Deletes user by ID
+- Response:
+  - 204 No Content on success
+  - 400 Bad Request if invalid UUID
+  - 404 Not Found if user doesn't exist
+
+## Error Handling
+
+- 404: Not Found - When accessing non-existing endpoints
+- 400: Bad Request - When request validation fails
+- 500: Internal Server Error - For server-side errors
+
+## Multi-Threading Support
+
+When running in multi-threaded mode (`npm run start:multi`):
+- Load balancer runs on base port (default: 4000)
+- Worker instances run on consecutive ports (4001, 4002, etc.)
+- Requests are distributed using Round-robin algorithm
+- Database state remains consistent across all workers
+
+## Testing
+
+Run the test suite:
+```
+npm test
+```
+
+Test scenarios include:
+1. Getting all users (empty array initially)
+2. Creating new user
+3. Retrieving created user
+4. Updating user
+5. Deleting user
+6. Verifying deletion
+
+## Technical Details
+
+- Node.js version: 22.x.x or higher
+- TypeScript implementation
+- In-memory database
+- UUID v4 for unique identifiers
+- Asynchronous API implementation
+
+## Dependencies
+
+### Production Dependencies
+- dotenv: ^16.5.0
+
+### Development Dependencies
+- @types/jest: ^29.5.14
+- @types/node: ^22.15.17
+- @types/uuid: ^9.0.8
+- cross-env: ^7.0.3
+- jest: ^29.7.0
+- nodemon: ^3.1.10
+- ts-jest: ^29.3.2
+- ts-node: ^10.9.2
+- typescript: ^5.8.3
