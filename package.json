@@ -2,15 +2,28 @@
   "name": "crud_api",
   "version": "1.0.0",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start:dev": "nodemon --exec node --loader ts-node/esm src/index.ts",
+    "start:prod": "npm run build && node dist/index.js",
+    "start:multi": "cross-env MODE=cluster node --loader ts-node/esm src/index.ts",
+    "test": "cross-env NODE_OPTIONS=\"--experimental-vm-modules --experimental-loader=ts-node/esm\" jest",
+    "build": "tsc"
   },
   "keywords": [],
-  "author": "",
+  "author": "andreevsv",
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "@types/node": "^22.15.17"
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.15.17",
+    "@types/uuid": "^9.0.8",
+    "cross-env": "^7.0.3",
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.10",
+    "ts-jest": "^29.3.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   },
   "dependencies": {
     "dotenv": "^16.5.0"
